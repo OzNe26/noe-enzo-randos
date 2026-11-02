@@ -59,8 +59,10 @@
   @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 
   /* ---------- MARQUEURS ---------- */
-  .marker{width:22px;height:22px;position:relative;cursor:pointer;opacity:0;transform:scale(0) translateY(-40px);transition:opacity .5s, transform .7s cubic-bezier(.2,1.6,.4,1)}
-  .marker.show{opacity:1;transform:scale(1)}
+  .marker{width:22px;height:22px;cursor:pointer}
+  .marker .in{position:absolute;inset:0;opacity:0;transform:scale(0) translateY(-40px);transition:opacity .5s, transform .7s cubic-bezier(.2,1.6,.4,1)}
+  .marker.show .in{opacity:1;transform:none}
+  .marker.active{z-index:5}
   .marker .dot{position:absolute;inset:5px;border-radius:50%;background:var(--red);border:2px solid #fff;box-shadow:0 0 12px var(--red),0 2px 6px rgba(0,0,0,.6);transition:transform .25s}
   .marker .pulse{position:absolute;inset:0;border-radius:50%;background:var(--red-glow);animation:pulse 2s infinite}
   .marker.done .dot{background:#2ecc71;box-shadow:0 0 12px #2ecc71,0 2px 6px rgba(0,0,0,.6)}
@@ -253,21 +255,19 @@ const map = new maplibregl.Map({
   container:'map',
   center:[10,28], zoom: isMobile?0.6:1.5, pitch:0,
   attributionControl:{compact:true},
-  maxPitch:80,
+  maxPitch:75,
   style:{
     version:8,
     projection:{type:'globe'},
     sky:{
-      'sky-color':'#1b3b6f','horizon-color':'#a8cfff','fog-color':'#dbe9ff',
-      'sky-horizon-blend':0.6,'horizon-fog-blend':0.5,'fog-ground-blend':0.85,
+      'sky-color':'#0d2347','horizon-color':'#7fa6d6','fog-color':'#b9cde6',
+      'sky-horizon-blend':0.7,'horizon-fog-blend':0.6,'fog-ground-blend':0.9,
       'atmosphere-blend':['interpolate',['linear'],['zoom'],0,1,5,1,8,0]
     },
     sources:{
       sat:{type:'raster',tileSize:256,maxzoom:18,
         tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
         attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'},
-      labels:{type:'raster',tileSize:256,maxzoom:18,
-        tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}']},
       dem:{type:'raster-dem',encoding:'terrarium',tileSize:256,maxzoom:14,
         tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
         attribution:'Relief © Mapzen / AWS Terrain Tiles'},
@@ -277,12 +277,21 @@ const map = new maplibregl.Map({
     layers:[
       {id:'bg',type:'background',paint:{'background-color':'#0a1424'}},
       {id:'sat',type:'raster',source:'sat',paint:{'raster-saturation':0.15,'raster-contrast':0.08}},
-      {id:'shade',type:'hillshade',source:'demShade',paint:{'hillshade-exaggeration':0.35,'hillshade-shadow-color':'#0b1020'}},
-      {id:'labels',type:'raster',source:'labels',paint:{'raster-opacity':['interpolate',['linear'],['zoom'],2,0.9,9,0.55]}}
+      {id:'shade',type:'hillshade',source:'demShade',minzoom:8,paint:{'hillshade-exaggeration':0.3,'hillshade-shadow-color':'#0b1020'}}
     ]
   }
 });
 map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
+
+/* Relief 3D : activé seulement de près, avec effet de montée progressive */
+let terrainOn=false, riseId=0;
+function terrainOff(){ riseId++; if(terrainOn){ try{map.setTerrain(null);}catch(e){} terrainOn=false; } }
+function riseTerrain(){
+  const id=++riseId, t0=performance.now();
+  (function f(t){ if(id!==riseId) return; const p=Math.min(1,(t-t0)/2200), e=1-Math.pow(1-p,3);
+    try{ map.setTerrain({source:'dem', exaggeration:0.01+1.5*e}); terrainOn=true; }catch(err){ return; }
+    if(p<1) requestAnimationFrame(f); })(t0);
+}
 
 /* Rotation du globe à l'accueil */
 let spinning = true;
@@ -299,7 +308,7 @@ const markers = [];
 RANDOS.forEach((r,i)=>{
   const el = document.createElement('div');
   el.className = 'marker' + (r.statut==='fait'?' done':'');
-  el.innerHTML = `<span class="pulse"></span><span class="dot"></span><span class="tip">${r.nom}</span>`;
+  el.innerHTML = `<div class="in"><span class="pulse"></span><span class="dot"></span><span class="tip">${r.nom}</span></div>`;
   el.addEventListener('click',e=>{e.stopPropagation(); stopTour(); focus(i);});
   const m = new maplibregl.Marker({element:el, anchor:'center'}).setLngLat([r.lng,r.lat]);
   markers.push({m,el});
@@ -345,12 +354,12 @@ function focus(i){
   $('#c-note').textContent = r.note || (!r.dist ? 'Infos à compléter.' : '');
   $('#card').classList.add('on');
 
-  stopOrbit();
+  stopOrbit(); terrainOff();
   const pad = isMobile ? {bottom:window.innerHeight*0.42} : {right:360, bottom:120};
-  map.flyTo({ center:[r.lng,r.lat], zoom: r.itinerance ? 9.6 : 13, pitch: r.itinerance ? 60 : 72,
+  map.flyTo({ center:[r.lng,r.lat], zoom: r.itinerance ? 9.6 : 12.6, pitch: r.itinerance ? 55 : 68,
     bearing: (map.getBearing() + 70 + Math.random()*60) % 360,
     duration: 5200, curve: 1.7, padding: pad, essential:true });
-  map.once('moveend',()=>{ if(current===i && !touring){ orbiting=true; orbit(); } });
+  map.once('moveend',()=>{ if(current!==i) return; riseTerrain(); if(!touring){ orbiting=true; orbit(); } });
 }
 function step(d){ const ids=visibles(); if(!ids.length) return; let k=ids.indexOf(current); k = k<0?0:(k+d+ids.length)%ids.length; focus(ids[k]); }
 $('#c-next').onclick=()=>{stopTour(); step(1);};
@@ -358,8 +367,8 @@ $('#c-prev').onclick=()=>{stopTour(); step(-1);};
 $('#close').onclick=()=>{ $('#card').classList.remove('on'); current=-1; markers.forEach(({el})=>el.classList.remove('active')); renderList(); overview(); };
 
 /* Vues */
-function overview(){ stopOrbit(); map.flyTo({center:[6.6,46.0], zoom:isMobile?4.6:5.6, pitch:58, bearing:-15, duration:4000, padding:{right:isMobile?0:360, bottom:0}, essential:true}); }
-function world(){ stopOrbit(); map.flyTo({center:[-2,45], zoom:isMobile?1.2:2.2, pitch:0, bearing:0, duration:4500, padding:{right:isMobile?0:360}, essential:true}); }
+function overview(){ stopOrbit(); terrainOff(); map.flyTo({center:[6.6,46.0], zoom:isMobile?4.6:5.6, pitch:58, bearing:-15, duration:4000, padding:{right:isMobile?0:360, bottom:0}, essential:true}); }
+function world(){ stopOrbit(); terrainOff(); map.flyTo({center:[-2,45], zoom:isMobile?1.2:2.2, pitch:0, bearing:0, duration:4500, padding:{right:isMobile?0:360}, essential:true}); }
 $('#btn-alps').onclick=()=>{stopTour(); overview();};
 $('#btn-world').onclick=()=>{stopTour(); world();};
 
@@ -395,7 +404,6 @@ $('#go').onclick = ()=>{
     easing:t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2});
   map.once('moveend',()=>{
     // 2) La carte passe en relief 3D
-    try { map.setTerrain({source:'dem', exaggeration:1.5}); } catch(e){ console.warn('terrain',e); }
     // 3) Les points rouges tombent un par un
     markers.forEach(({m,el},i)=>{ m.addTo(map); setTimeout(()=>el.classList.add('show'), 150+i*110); });
     addTraces();
