@@ -351,6 +351,52 @@ if(!window.maplibregl || !(()=>{try{const c=document.createElement('canvas');ret
     ctx.fillStyle='rgba(255,255,255,.8)'; ctx.beginPath(); ctx.arc(3.2,-0.9,0.9,0,6.283); ctx.fill();
     ctx.restore();
   }
+
+  /* ----- Satellites en orbite autour de la Terre ----- */
+  const SATS=[
+    {k:1.16,inc:1.15,node:0.35,sp:0.00042,ph:0,iss:true},
+    {k:1.30,inc:1.35,node:-0.6,sp:0.00030,ph:2.1},
+    {k:1.42,inc:0.95,node:1.2,sp:0.00024,ph:4.0},
+    {k:1.24,inc:1.45,node:2.4,sp:0.00036,ph:1.0},
+    {k:1.52,inc:1.25,node:-1.5,sp:0.00019,ph:5.2},
+    {k:1.36,inc:1.05,node:0.9,sp:0.00027,ph:3.3},
+  ];
+  function pos3(o,th){ // point de l'orbite en 3D (z>0 = vers nous)
+    const x=Math.cos(th), y=Math.sin(th)*Math.cos(o.inc), z=Math.sin(th)*Math.sin(o.inc);
+    const c=Math.cos(o.node), sn=Math.sin(o.node); return {x:x*c-y*sn, y:x*sn+y*c, z};
+  }
+  function drawSats(t){
+    const m=window.__map; if(!m || window.__spaceOff) return;
+    const c=m.project(m.getCenter()), Rg=512*Math.pow(2,m.getZoom())/(2*Math.PI);
+    for(const o of SATS){
+      const r=Rg*o.k;
+      // trajectoire (cachée derrière la Terre)
+      ctx.lineWidth=1*dpr;
+      for(let j=0;j<120;j++){ const a=pos3(o,j/120*6.283), b=pos3(o,(j+1)/120*6.283);
+        const hid=a.z<0 && Math.hypot(a.x,a.y)*o.k<1.0; if(hid) continue;
+        ctx.strokeStyle=`rgba(160,200,255,${a.z<0?0.06:0.16})`;
+        ctx.beginPath(); ctx.moveTo((c.x+a.x*r)*dpr,(c.y+a.y*r)*dpr); ctx.lineTo((c.x+b.x*r)*dpr,(c.y+b.y*r)*dpr); ctx.stroke(); }
+      // satellite
+      const th=o.ph+t*o.sp, p=pos3(o,th);
+      if(p.z<0 && Math.hypot(p.x,p.y)*o.k<1.0) continue;
+      const q=pos3(o,th+0.01), ang=Math.atan2(q.y-p.y,q.x-p.x);
+      const sc=(o.iss?2.0:1.35)*(0.8+0.25*p.z)*Math.max(.55,Math.min(1.4,Rg/230));
+      ctx.save(); ctx.translate((c.x+p.x*r)*dpr,(c.y+p.y*r)*dpr); ctx.rotate(ang+Math.PI/2); ctx.scale(sc*dpr,sc*dpr);
+      ctx.globalAlpha=p.z<0?0.55:1;
+      if(o.iss){
+        ctx.fillStyle='#c9ced6'; ctx.fillRect(-1,-9,2,18);                         // poutre
+        ctx.fillStyle='#2f5fb3'; for(const yy of [-9,-5,3,7]){ ctx.fillRect(-9,yy,7,2.4); ctx.fillRect(2,yy,7,2.4); } // panneaux
+        ctx.fillStyle='#e8e8e8'; ctx.fillRect(-2.5,-2.5,5,5);                      // modules
+      } else {
+        ctx.fillStyle='#2f5fb3'; ctx.fillRect(-9,-1.6,6,3.2); ctx.fillRect(3,-1.6,6,3.2);
+        ctx.strokeStyle='#9fb8e8'; ctx.lineWidth=.4; ctx.strokeRect(-9,-1.6,6,3.2); ctx.strokeRect(3,-1.6,6,3.2);
+        ctx.fillStyle='#d8b25a'; ctx.fillRect(-3,-2.6,6,5.2);                      // corps doré
+        ctx.fillStyle='#eee'; ctx.fillRect(-.5,-4.5,1,2);                          // antenne
+      }
+      if(Math.sin(t/260+o.ph*3)>0.6){ ctx.fillStyle='#ff4b3a'; ctx.beginPath(); ctx.arc(0,0,1.3,0,6.283); ctx.fill(); }
+      ctx.restore(); ctx.globalAlpha=1;
+    }
+  }
   (function loop(t){
     // cible : la souris, ou une balade tranquille si personne ne bouge
     let tx,ty; if(target && t-lastMove<6000){ tx=target.x; ty=target.y; }
@@ -368,6 +414,7 @@ if(!window.maplibregl || !(()=>{try{const c=document.createElement('canvas');ret
     for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.x+=p.vx; p.y+=p.vy; p.l-=0.022; p.r+=0.12; if(p.l<=0){parts.splice(i,1);continue;}
       const hot=p.l>0.7; ctx.fillStyle=hot?`rgba(255,${150+p.l*100|0},60,${p.l})`:`rgba(190,200,220,${p.l*0.35})`;
       ctx.beginPath(); ctx.arc(p.x*dpr,p.y*dpr,p.r*dpr,0,6.283); ctx.fill(); }
+    drawSats(t);
     drawRocket();
     requestAnimationFrame(loop);
   })(0);
@@ -404,8 +451,9 @@ const map = new maplibregl.Map({
     ]
   }
 });
+window.__map=map;
 map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
-map.on('move',()=>{ const off=map.getZoom()>2.8 || map.getPitch()>25; document.getElementById('planets').classList.toggle('off',off); document.getElementById('rocket').classList.toggle('off',off); });
+map.on('move',()=>{ const off=map.getZoom()>2.8 || map.getPitch()>25; document.getElementById('planets').classList.toggle('off',off); document.getElementById('rocket').classList.toggle('off',off); window.__spaceOff=off; });
 
 /* Relief 3D : activé seulement de près, avec effet de montée progressive */
 let terrainOn=false, riseId=0;
