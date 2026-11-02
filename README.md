@@ -21,4 +21,4 @@ Tout se passe dans `index.html`, dans le bloc `const RANDOS = [ ... ]` (en haut 
 Sur GitHub tu peux modifier le fichier directement : ouvre `index.html` puis clique sur le crayon ✏️ et sur **Commit changes**.
 
 ## Crédits
-Carte : MapLibre GL JS · Imagerie satellite © Esri · Relief : AWS Terrain Tiles (Mapzen)
+Carte : MapLibre GL JS · Imagerie satellite © Esri · Relief : AWS Terrain Tiles (Mapzen) · Textures des planètes : James Hastings-Trew (Planet Pixel Emporium), via threex.planets

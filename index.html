@@ -24,40 +24,42 @@
   #stars{position:absolute;inset:0;width:100%;height:100%}
   #planets{position:absolute;inset:0;transition:opacity 1.6s ease, transform 2s ease}
   #planets.off{opacity:0;transform:scale(1.25)}
-  .pl{position:absolute;border-radius:50%;animation:drift var(--d,24s) ease-in-out infinite alternate}
-  .pl .body{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+  /* Planètes : vraies textures plaquées sur des sphères qui tournent */
+  .pl{position:absolute;width:var(--s);height:var(--s);animation:drift var(--d,24s) ease-in-out infinite alternate}
+  .pl .body{position:absolute;inset:0;border-radius:50%;overflow:hidden;
+    background-image:var(--tex);background-size:auto 100%;background-repeat:repeat-x;
+    animation:rot var(--r,60s) linear infinite;box-shadow:0 0 calc(var(--s)*.18) var(--glow,rgba(255,255,255,.08))}
   .pl .body::after{content:"";position:absolute;inset:0;border-radius:50%;
-    background:radial-gradient(circle at 28% 28%,rgba(255,255,255,.22) 0%,transparent 40%,rgba(0,0,0,.4) 72%,rgba(0,0,0,.8) 90%)}
+    background:radial-gradient(circle at 30% 32%,rgba(255,255,255,.18) 0%,transparent 30%,rgba(0,0,0,.25) 58%,rgba(0,0,0,.85) 80%,#000 100%);
+    box-shadow:inset 0 0 calc(var(--s)*.08) rgba(0,0,0,.6)}
+  @keyframes rot{from{background-position:0 0}to{background-position:calc(var(--s) * -2) 0}}
   @keyframes drift{from{transform:translate(0,0)}to{transform:translate(var(--x,10px),var(--y,-14px))}}
-  .sun{left:-230px;top:-230px;width:520px;height:520px;animation:sunpulse 7s ease-in-out infinite alternate;
-    background:radial-gradient(circle,#fffbe8 0%,#ffe9a3 14%,#ffc24a 26%,#ff8c1a 36%,rgba(255,110,20,.35) 48%,rgba(255,90,20,.08) 62%,transparent 72%)}
-  @keyframes sunpulse{from{filter:brightness(1)}to{filter:brightness(1.15)}}
-  .mercury{left:300px;top:150px;width:12px;height:12px;--d:18s}
-  .mercury .body{background:radial-gradient(circle at 40% 40%,#c9c2b8,#7d746b)}
-  .venus{left:170px;top:330px;width:24px;height:24px;--d:22s;--x:-8px;--y:10px}
-  .venus .body{background:linear-gradient(160deg,#f6e3b4,#d9b77a 60%,#c49a5c)}
-  .mars{right:22%;top:9%;width:20px;height:20px;--d:20s;--x:12px}
-  .mars .body{background:radial-gradient(circle at 60% 30%,#e8a07a 0%,#c1502e 45%,#8a3218 100%)}
-  .jupiter{left:5%;bottom:7%;width:130px;height:130px;--d:30s;--x:14px;--y:-8px}
-  .jupiter .body{background:linear-gradient(175deg,#e9dcc5 0%,#c9a27c 12%,#efe3cf 20%,#b5815a 28%,#e7d3b6 36%,#d8b48d 44%,#f1e6d2 52%,#a8704c 60%,#e2c9a6 68%,#c79f78 78%,#efe0c8 88%,#b88c66 100%)}
-  .jupiter .spot{position:absolute;width:22%;height:12%;left:58%;top:62%;border-radius:50%;background:#b5533a;opacity:.85;filter:blur(1px)}
-  .saturn{right:7%;bottom:11%;width:92px;height:92px;--d:34s;--x:-12px;--y:-10px}
-  .saturn .body{background:linear-gradient(170deg,#f3e2b8 0%,#dcc08a 30%,#efd9a6 50%,#c9a86e 75%,#e6cf9c 100%)}
-  .saturn .ring{position:absolute;left:-62%;top:32%;width:224%;height:36%;border-radius:50%;transform:rotate(-18deg);
-    background:radial-gradient(ellipse at center,transparent 44%,rgba(214,192,148,.85) 46%,rgba(170,148,108,.55) 54%,transparent 56%,rgba(222,204,164,.7) 58%,rgba(190,170,130,.4) 66%,transparent 68%)}
-  .saturn .ring.back{z-index:-1}
+  .sun{--s:420px;left:-170px;top:-170px;--r:120s;--d:40s}
+  .sun .body{filter:saturate(2.2) hue-rotate(-14deg) contrast(1.15);box-shadow:0 0 60px 20px rgba(255,170,60,.55),0 0 160px 70px rgba(255,120,30,.3),0 0 320px 140px rgba(255,90,20,.12)}
+  .sun .body::after{background:radial-gradient(circle,transparent 55%,rgba(255,200,90,.35) 85%,rgba(255,230,160,.7) 100%);box-shadow:none}
+  .mercury{--s:14px;left:300px;top:170px;--d:18s}
+  .venus{--s:26px;left:180px;top:340px;--d:22s;--x:-8px;--y:10px;--glow:rgba(255,220,160,.25)}
+  .moon{--s:16px;left:61%;top:14%;--d:16s}
+  .mars{--s:22px;right:22%;top:9%;--d:20s;--x:12px;--glow:rgba(255,120,80,.2)}
+  .jupiter{--s:130px;left:5%;bottom:7%;--d:30s;--x:14px;--y:-8px;--r:40s;--glow:rgba(230,200,160,.18)}
+  .saturn{--s:84px;right:8%;bottom:12%;--d:34s;--x:-12px;--y:-10px;--r:45s;--glow:rgba(240,215,160,.18)}
+  .saturn .ring{position:absolute;left:50%;top:50%;width:calc(var(--s)*2.3);height:calc(var(--s)*2.3);
+    background:url(img/saturn-ring.png) center/100% 100% no-repeat;transform:translate(-50%,-50%) rotate(-20deg) scaleY(.26)}
+  .saturn .ring.back{z-index:-1;filter:brightness(.75)}
   .saturn .ring.front{clip-path:inset(50% 0 0 0)}
-  .uranus{right:4%;top:40%;width:46px;height:46px;--d:26s;--y:12px}
-  .uranus .body{background:radial-gradient(circle at 40% 40%,#d8f6f7,#93d8dc 55%,#5fb0b8)}
-  .neptune{right:13%;top:3%;width:38px;height:38px;--d:28s;--x:-10px;--y:8px}
-  .neptune .body{background:radial-gradient(circle at 40% 40%,#8fb2ff,#3c62d6 55%,#22379a)}
-  .moon{left:61%;top:14%;width:16px;height:16px;--d:16s}
-  .moon .body{background:radial-gradient(circle at 40% 40%,#eeeeea,#a9a9a3)}
+  .uranus{--s:44px;right:4%;top:40%;--d:26s;--y:12px;--glow:rgba(150,230,235,.3)}
+  .neptune{--s:38px;right:13%;top:3%;--d:28s;--x:-10px;--y:8px;--glow:rgba(90,130,255,.35)}
+  .sun .body{--tex:url(img/sun.jpg)} .mercury .body{--tex:url(img/mercury.jpg)} .venus .body{--tex:url(img/venus.jpg)}
+  .moon .body{--tex:url(img/moon.jpg)} .mars .body{--tex:url(img/mars.jpg)} .jupiter .body{--tex:url(img/jupiter.jpg)}
+  .saturn .body{--tex:url(img/saturn.jpg)} .uranus .body{--tex:url(img/uranus.jpg)} .neptune .body{--tex:url(img/neptune.jpg)}
   @media (max-width:760px){
-    .sun{width:320px;height:320px;left:-150px;top:-150px}
-    .jupiter{width:70px;height:70px;bottom:22%}.saturn{width:50px;height:50px;bottom:24%}
-    .uranus{width:28px;height:28px}.neptune{width:24px;height:24px}.mercury{left:150px;top:90px}.venus{left:60px;top:200px}
+    .sun{--s:260px;left:-120px;top:-120px}
+    .jupiter{--s:70px;bottom:22%}.saturn{--s:46px;bottom:24%}
+    .uranus{--s:28px}.neptune{--s:24px}.mercury{left:150px;top:100px}.venus{left:60px;top:210px}
   }
+  /* Fusée */
+  #rocket{position:fixed;inset:0;z-index:15;pointer-events:none;transition:opacity 1s}
+  #rocket.off{opacity:0}
   #map{position:fixed;inset:0;z-index:1}
   .maplibregl-ctrl-attrib{font-size:10px;background:rgba(0,0,0,.4)!important;color:#ccc}
   .maplibregl-ctrl-attrib a{color:#ddd}
@@ -161,18 +163,19 @@
 <div id="space">
   <canvas id="stars"></canvas>
   <div id="planets">
-    <div class="pl sun"></div>
+    <div class="pl sun"><div class="body"></div></div>
     <div class="pl mercury"><div class="body"></div></div>
     <div class="pl venus"><div class="body"></div></div>
     <div class="pl moon"><div class="body"></div></div>
     <div class="pl mars"><div class="body"></div></div>
-    <div class="pl jupiter"><div class="body"><div class="spot"></div></div></div>
+    <div class="pl jupiter"><div class="body"></div></div>
     <div class="pl saturn"><div class="ring back"></div><div class="body"></div><div class="ring front"></div></div>
     <div class="pl uranus"><div class="body"></div></div>
     <div class="pl neptune"><div class="body"></div></div>
   </div>
 </div>
 <div id="map"></div>
+<canvas id="rocket"></canvas>
 
 <!-- Écran d'accueil -->
 <section id="intro">
@@ -318,6 +321,58 @@ if(!window.maplibregl || !(()=>{try{const c=document.createElement('canvas');ret
     pls.forEach((el,i)=>{ const k=(i%4+1)*6; el.style.translate=`${-dx*k}px ${-dy*k}px`; }); });
 })();
 
+
+/* ---------- FUSÉE QUI SUIT LA SOURIS ---------- */
+(function(){
+  const cv=document.getElementById('rocket'), ctx=cv.getContext('2d'); const dpr=Math.min(2,devicePixelRatio||1);
+  let W,H; function rs(){ W=cv.width=innerWidth*dpr; H=cv.height=innerHeight*dpr; cv.style.width=innerWidth+'px'; cv.style.height=innerHeight+'px'; } rs(); addEventListener('resize',rs);
+  const R={x:innerWidth*0.2,y:innerHeight*0.75,vx:2,vy:-1,a:-0.4};
+  let target=null, lastMove=0; const parts=[];
+  addEventListener('mousemove',e=>{target={x:e.clientX,y:e.clientY}; lastMove=performance.now();});
+  addEventListener('touchmove',e=>{const t=e.touches[0]; target={x:t.clientX,y:t.clientY}; lastMove=performance.now();},{passive:true});
+  function drawRocket(){
+    ctx.save(); ctx.translate(R.x*dpr,R.y*dpr); ctx.rotate(R.a); ctx.scale(dpr,dpr);
+    const sp=Math.hypot(R.vx,R.vy), fl=10+Math.min(26,sp*3)+Math.random()*6;
+    // flamme
+    let g=ctx.createLinearGradient(-14,0,-14-fl,0); g.addColorStop(0,'#fff6c8'); g.addColorStop(.35,'#ffb23e'); g.addColorStop(1,'rgba(255,60,20,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(-13,-5); ctx.quadraticCurveTo(-14-fl*.6,-7,-14-fl,0); ctx.quadraticCurveTo(-14-fl*.6,7,-13,5); ctx.closePath(); ctx.fill();
+    // ailerons
+    ctx.fillStyle='#d62d20';
+    ctx.beginPath(); ctx.moveTo(-6,-6); ctx.lineTo(-16,-14); ctx.lineTo(-14,-5); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-6,6); ctx.lineTo(-16,14); ctx.lineTo(-14,5); ctx.closePath(); ctx.fill();
+    // corps
+    g=ctx.createLinearGradient(0,-7,0,7); g.addColorStop(0,'#ffffff'); g.addColorStop(.5,'#dfe5ee'); g.addColorStop(1,'#8d97a8');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(-14,-6); ctx.lineTo(6,-6.5); ctx.quadraticCurveTo(20,-5,26,0); ctx.quadraticCurveTo(20,5,6,6.5); ctx.lineTo(-14,6); ctx.closePath(); ctx.fill();
+    // nez
+    ctx.fillStyle='#e8372b'; ctx.beginPath(); ctx.moveTo(15,-4.6); ctx.quadraticCurveTo(22,-3,26,0); ctx.quadraticCurveTo(22,3,15,4.6); ctx.quadraticCurveTo(16.5,0,15,-4.6); ctx.fill();
+    // hublot
+    ctx.fillStyle='#2b3a55'; ctx.beginPath(); ctx.arc(4,0,3.6,0,6.283); ctx.fill();
+    ctx.fillStyle='#7fd0ff'; ctx.beginPath(); ctx.arc(4,0,2.5,0,6.283); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.8)'; ctx.beginPath(); ctx.arc(3.2,-0.9,0.9,0,6.283); ctx.fill();
+    ctx.restore();
+  }
+  (function loop(t){
+    // cible : la souris, ou une balade tranquille si personne ne bouge
+    let tx,ty; if(target && t-lastMove<6000){ tx=target.x; ty=target.y; }
+    else { tx=innerWidth*(.5+.38*Math.cos(t/5200)); ty=innerHeight*(.5+.36*Math.sin(t/3900)); }
+    const dx=tx-R.x, dy=ty-R.y, d=Math.hypot(dx,dy);
+    const max=9, want=Math.min(max,d*0.05);
+    const dvx=d>1?dx/d*want:0, dvy=d>1?dy/d*want:0;
+    R.vx+=(dvx-R.vx)*0.06; R.vy+=(dvy-R.vy)*0.06; R.x+=R.vx; R.y+=R.vy;
+    const sp=Math.hypot(R.vx,R.vy);
+    if(sp>0.25){ let na=Math.atan2(R.vy,R.vx), da=na-R.a; while(da>Math.PI)da-=6.283; while(da<-Math.PI)da+=6.283; R.a+=da*0.12; }
+    // traînée de fumée et d'étincelles
+    if(sp>0.6){ for(let k=0;k<2;k++){ const bx=R.x-Math.cos(R.a)*16, by=R.y-Math.sin(R.a)*16;
+      parts.push({x:bx,y:by,vx:-Math.cos(R.a)*sp*.4+(Math.random()-.5)*.8,vy:-Math.sin(R.a)*sp*.4+(Math.random()-.5)*.8,l:1,r:2+Math.random()*2}); } }
+    ctx.clearRect(0,0,W,H);
+    for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.x+=p.vx; p.y+=p.vy; p.l-=0.022; p.r+=0.12; if(p.l<=0){parts.splice(i,1);continue;}
+      const hot=p.l>0.7; ctx.fillStyle=hot?`rgba(255,${150+p.l*100|0},60,${p.l})`:`rgba(190,200,220,${p.l*0.35})`;
+      ctx.beginPath(); ctx.arc(p.x*dpr,p.y*dpr,p.r*dpr,0,6.283); ctx.fill(); }
+    drawRocket();
+    requestAnimationFrame(loop);
+  })(0);
+})();
+
 /* ---------- CARTE ---------- */
 const map = new maplibregl.Map({
   container:'map',
@@ -350,7 +405,7 @@ const map = new maplibregl.Map({
   }
 });
 map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
-map.on('move',()=>{ document.getElementById('planets').classList.toggle('off', map.getZoom()>2.8 || map.getPitch()>25); });
+map.on('move',()=>{ const off=map.getZoom()>2.8 || map.getPitch()>25; document.getElementById('planets').classList.toggle('off',off); document.getElementById('rocket').classList.toggle('off',off); });
 
 /* Relief 3D : activé seulement de près, avec effet de montée progressive */
 let terrainOn=false, riseId=0;
