@@ -18,29 +18,53 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;overflow:hidden;background:#02040a;color:var(--ink);font-family:Inter,system-ui,sans-serif}
-  /* Ciel étoilé derrière le globe */
-  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
-    background:
-      radial-gradient(1px 1px at 12% 22%,#fff 50%,transparent 51%),
-      radial-gradient(1px 1px at 78% 12%,#fff 50%,transparent 51%),
-      radial-gradient(1.5px 1.5px at 35% 70%,#cfe1ff 50%,transparent 51%),
-      radial-gradient(1px 1px at 62% 48%,#fff 50%,transparent 51%),
-      radial-gradient(1px 1px at 88% 82%,#fff 50%,transparent 51%),
-      radial-gradient(1.5px 1.5px at 6% 88%,#ffe9c7 50%,transparent 51%),
-      radial-gradient(1px 1px at 50% 8%,#fff 50%,transparent 51%),
-      radial-gradient(1px 1px at 22% 50%,#fff 50%,transparent 51%),
-      radial-gradient(1px 1px at 95% 40%,#cfe1ff 50%,transparent 51%),
-      radial-gradient(ellipse at 50% 120%,#13233f 0%,#02040a 60%);
-    background-size:420px 420px,380px 380px,520px 520px,300px 300px,460px 460px,600px 600px,350px 350px,280px 280px,500px 500px,100% 100%;
-    animation:twinkle 8s ease-in-out infinite alternate}
-  @keyframes twinkle{from{opacity:.75}to{opacity:1}}
+  /* ---------- ESPACE : étoiles + système solaire ---------- */
+  body{background:radial-gradient(ellipse at 70% 30%,#101a3a 0%,#060a18 45%,#02040a 80%)}
+  #space{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  #stars{position:absolute;inset:0;width:100%;height:100%}
+  #planets{position:absolute;inset:0;transition:opacity 1.6s ease, transform 2s ease}
+  #planets.off{opacity:0;transform:scale(1.25)}
+  .pl{position:absolute;border-radius:50%;animation:drift var(--d,24s) ease-in-out infinite alternate}
+  .pl .body{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+  .pl .body::after{content:"";position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(circle at 28% 28%,rgba(255,255,255,.22) 0%,transparent 40%,rgba(0,0,0,.4) 72%,rgba(0,0,0,.8) 90%)}
+  @keyframes drift{from{transform:translate(0,0)}to{transform:translate(var(--x,10px),var(--y,-14px))}}
+  .sun{left:-230px;top:-230px;width:520px;height:520px;animation:sunpulse 7s ease-in-out infinite alternate;
+    background:radial-gradient(circle,#fffbe8 0%,#ffe9a3 14%,#ffc24a 26%,#ff8c1a 36%,rgba(255,110,20,.35) 48%,rgba(255,90,20,.08) 62%,transparent 72%)}
+  @keyframes sunpulse{from{filter:brightness(1)}to{filter:brightness(1.15)}}
+  .mercury{left:300px;top:150px;width:12px;height:12px;--d:18s}
+  .mercury .body{background:radial-gradient(circle at 40% 40%,#c9c2b8,#7d746b)}
+  .venus{left:170px;top:330px;width:24px;height:24px;--d:22s;--x:-8px;--y:10px}
+  .venus .body{background:linear-gradient(160deg,#f6e3b4,#d9b77a 60%,#c49a5c)}
+  .mars{right:22%;top:9%;width:20px;height:20px;--d:20s;--x:12px}
+  .mars .body{background:radial-gradient(circle at 60% 30%,#e8a07a 0%,#c1502e 45%,#8a3218 100%)}
+  .jupiter{left:5%;bottom:7%;width:130px;height:130px;--d:30s;--x:14px;--y:-8px}
+  .jupiter .body{background:linear-gradient(175deg,#e9dcc5 0%,#c9a27c 12%,#efe3cf 20%,#b5815a 28%,#e7d3b6 36%,#d8b48d 44%,#f1e6d2 52%,#a8704c 60%,#e2c9a6 68%,#c79f78 78%,#efe0c8 88%,#b88c66 100%)}
+  .jupiter .spot{position:absolute;width:22%;height:12%;left:58%;top:62%;border-radius:50%;background:#b5533a;opacity:.85;filter:blur(1px)}
+  .saturn{right:7%;bottom:11%;width:92px;height:92px;--d:34s;--x:-12px;--y:-10px}
+  .saturn .body{background:linear-gradient(170deg,#f3e2b8 0%,#dcc08a 30%,#efd9a6 50%,#c9a86e 75%,#e6cf9c 100%)}
+  .saturn .ring{position:absolute;left:-62%;top:32%;width:224%;height:36%;border-radius:50%;transform:rotate(-18deg);
+    background:radial-gradient(ellipse at center,transparent 44%,rgba(214,192,148,.85) 46%,rgba(170,148,108,.55) 54%,transparent 56%,rgba(222,204,164,.7) 58%,rgba(190,170,130,.4) 66%,transparent 68%)}
+  .saturn .ring.back{z-index:-1}
+  .saturn .ring.front{clip-path:inset(50% 0 0 0)}
+  .uranus{right:4%;top:40%;width:46px;height:46px;--d:26s;--y:12px}
+  .uranus .body{background:radial-gradient(circle at 40% 40%,#d8f6f7,#93d8dc 55%,#5fb0b8)}
+  .neptune{right:13%;top:3%;width:38px;height:38px;--d:28s;--x:-10px;--y:8px}
+  .neptune .body{background:radial-gradient(circle at 40% 40%,#8fb2ff,#3c62d6 55%,#22379a)}
+  .moon{left:61%;top:14%;width:16px;height:16px;--d:16s}
+  .moon .body{background:radial-gradient(circle at 40% 40%,#eeeeea,#a9a9a3)}
+  @media (max-width:760px){
+    .sun{width:320px;height:320px;left:-150px;top:-150px}
+    .jupiter{width:70px;height:70px;bottom:22%}.saturn{width:50px;height:50px;bottom:24%}
+    .uranus{width:28px;height:28px}.neptune{width:24px;height:24px}.mercury{left:150px;top:90px}.venus{left:60px;top:200px}
+  }
   #map{position:fixed;inset:0;z-index:1}
   .maplibregl-ctrl-attrib{font-size:10px;background:rgba(0,0,0,.4)!important;color:#ccc}
   .maplibregl-ctrl-attrib a{color:#ddd}
 
   /* ---------- INTRO ---------- */
   #intro{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;
-    background:radial-gradient(ellipse at center,rgba(2,4,10,0) 30%,rgba(2,4,10,.85) 75%);transition:opacity 1.4s ease, transform 1.4s ease}
+    background:radial-gradient(ellipse at center,rgba(2,4,10,.25) 0%,rgba(2,4,10,0) 45%,rgba(2,4,10,.2) 90%);transition:opacity 1.4s ease, transform 1.4s ease}
   #intro.hide{opacity:0;transform:scale(1.15);pointer-events:none}
   .kicker{letter-spacing:.42em;text-transform:uppercase;font-size:12px;color:var(--accent);opacity:0;animation:rise 1s .3s forwards}
   #intro h1{font-family:Fraunces,serif;font-weight:800;font-size:clamp(44px,9vw,112px);line-height:.95;margin:18px 0 14px;
@@ -134,6 +158,20 @@
 </style>
 </head>
 <body>
+<div id="space">
+  <canvas id="stars"></canvas>
+  <div id="planets">
+    <div class="pl sun"></div>
+    <div class="pl mercury"><div class="body"></div></div>
+    <div class="pl venus"><div class="body"></div></div>
+    <div class="pl moon"><div class="body"></div></div>
+    <div class="pl mars"><div class="body"></div></div>
+    <div class="pl jupiter"><div class="body"><div class="spot"></div></div></div>
+    <div class="pl saturn"><div class="ring back"></div><div class="body"></div><div class="ring front"></div></div>
+    <div class="pl uranus"><div class="body"></div></div>
+    <div class="pl neptune"><div class="body"></div></div>
+  </div>
+</div>
 <div id="map"></div>
 
 <!-- Écran d'accueil -->
@@ -250,6 +288,36 @@ if(!window.maplibregl || !(()=>{try{const c=document.createElement('canvas');ret
   $('#err').style.display='flex';
 }
 
+
+/* ---------- CIEL ÉTOILÉ ---------- */
+(function(){
+  const cv=document.getElementById('stars'), ctx=cv.getContext('2d'); let W,H,stars=[],shoot=null;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  function init(){ W=cv.width=innerWidth*dpr; H=cv.height=innerHeight*dpr;
+    const n=Math.round(innerWidth*innerHeight/2600);
+    stars=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,r:(Math.random()**3*1.6+0.3)*dpr,
+      a:Math.random()*0.7+0.3,s:Math.random()*2+0.5,p:Math.random()*6.28,
+      c:['255,255,255','200,220,255','255,236,200','255,210,210'][Math.random()<.75?0:1+Math.floor(Math.random()*3)]})); }
+  init(); addEventListener('resize',init);
+  let last=0;
+  (function draw(t){
+    ctx.clearRect(0,0,W,H);
+    for(const st of stars){ const tw=st.a*(0.6+0.4*Math.sin(t/1000*st.s+st.p));
+      ctx.fillStyle=`rgba(${st.c},${tw})`; ctx.beginPath(); ctx.arc(st.x,st.y,st.r,0,6.283); ctx.fill(); }
+    if(!shoot && t-last>4000+Math.random()*5000){ last=t; const ang=0.35+Math.random()*0.4;
+      shoot={x:Math.random()*W*0.7,y:Math.random()*H*0.4,vx:Math.cos(ang)*14*dpr,vy:Math.sin(ang)*14*dpr,life:1}; }
+    if(shoot){ const g=ctx.createLinearGradient(shoot.x,shoot.y,shoot.x-shoot.vx*9,shoot.y-shoot.vy*9);
+      g.addColorStop(0,`rgba(255,255,255,${shoot.life})`); g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.strokeStyle=g; ctx.lineWidth=1.6*dpr; ctx.beginPath(); ctx.moveTo(shoot.x,shoot.y); ctx.lineTo(shoot.x-shoot.vx*9,shoot.y-shoot.vy*9); ctx.stroke();
+      shoot.x+=shoot.vx; shoot.y+=shoot.vy; shoot.life-=0.018; if(shoot.life<=0) shoot=null; }
+    requestAnimationFrame(draw);
+  })(0);
+  // Légère parallaxe des planètes avec la souris
+  const pls=[...document.querySelectorAll('#planets .pl')];
+  addEventListener('mousemove',e=>{ const dx=e.clientX/innerWidth-.5, dy=e.clientY/innerHeight-.5;
+    pls.forEach((el,i)=>{ const k=(i%4+1)*6; el.style.translate=`${-dx*k}px ${-dy*k}px`; }); });
+})();
+
 /* ---------- CARTE ---------- */
 const map = new maplibregl.Map({
   container:'map',
@@ -282,6 +350,7 @@ const map = new maplibregl.Map({
   }
 });
 map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
+map.on('move',()=>{ document.getElementById('planets').classList.toggle('off', map.getZoom()>2.8 || map.getPitch()>25); });
 
 /* Relief 3D : activé seulement de près, avec effet de montée progressive */
 let terrainOn=false, riseId=0;
