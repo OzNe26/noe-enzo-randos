@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Noé & Enzo — Carnet de randonnées</title>
+<meta name="description" content="Les randonnées de Noé et Enzo sur une carte 3D interactive.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+<style>
+  :root{
+    --red:#ff3b30; --red-glow:rgba(255,59,48,.55);
+    --ink:#f4f1ea; --muted:#a9b3c1; --glass:rgba(12,18,28,.72); --line:rgba(255,255,255,.12);
+    --accent:#ffd27a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#02040a;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  /* Ciel étoilé derrière le globe */
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(1px 1px at 12% 22%,#fff 50%,transparent 51%),
+      radial-gradient(1px 1px at 78% 12%,#fff 50%,transparent 51%),
+      radial-gradient(1.5px 1.5px at 35% 70%,#cfe1ff 50%,transparent 51%),
+      radial-gradient(1px 1px at 62% 48%,#fff 50%,transparent 51%),
+      radial-gradient(1px 1px at 88% 82%,#fff 50%,transparent 51%),
+      radial-gradient(1.5px 1.5px at 6% 88%,#ffe9c7 50%,transparent 51%),
+      radial-gradient(1px 1px at 50% 8%,#fff 50%,transparent 51%),
+      radial-gradient(1px 1px at 22% 50%,#fff 50%,transparent 51%),
+      radial-gradient(1px 1px at 95% 40%,#cfe1ff 50%,transparent 51%),
+      radial-gradient(ellipse at 50% 120%,#13233f 0%,#02040a 60%);
+    background-size:420px 420px,380px 380px,520px 520px,300px 300px,460px 460px,600px 600px,350px 350px,280px 280px,500px 500px,100% 100%;
+    animation:twinkle 8s ease-in-out infinite alternate}
+  @keyframes twinkle{from{opacity:.75}to{opacity:1}}
+  #map{position:fixed;inset:0;z-index:1}
+  .maplibregl-ctrl-attrib{font-size:10px;background:rgba(0,0,0,.4)!important;color:#ccc}
+  .maplibregl-ctrl-attrib a{color:#ddd}
+
+  /* ---------- INTRO ---------- */
+  #intro{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;
+    background:radial-gradient(ellipse at center,rgba(2,4,10,0) 30%,rgba(2,4,10,.85) 75%);transition:opacity 1.4s ease, transform 1.4s ease}
+  #intro.hide{opacity:0;transform:scale(1.15);pointer-events:none}
+  .kicker{letter-spacing:.42em;text-transform:uppercase;font-size:12px;color:var(--accent);opacity:0;animation:rise 1s .3s forwards}
+  #intro h1{font-family:Fraunces,serif;font-weight:800;font-size:clamp(44px,9vw,112px);line-height:.95;margin:18px 0 14px;
+    background:linear-gradient(180deg,#fff 30%,#c9d6ea);-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 10px 60px rgba(120,170,255,.25);opacity:0;animation:rise 1.2s .55s forwards}
+  #intro h1 em{font-style:normal;color:var(--red);-webkit-text-fill-color:var(--red)}
+  #intro p{color:var(--muted);max-width:520px;font-size:16px;line-height:1.6;opacity:0;animation:rise 1s .9s forwards}
+  .intro-stats{display:flex;gap:28px;margin:26px 0 34px;opacity:0;animation:rise 1s 1.15s forwards}
+  .intro-stats div{font-family:Fraunces,serif;font-size:32px;font-weight:800}
+  .intro-stats span{display:block;font-family:Inter;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  #go{all:unset;cursor:pointer;padding:16px 34px;border-radius:999px;background:var(--red);color:#fff;font-weight:700;letter-spacing:.06em;
+    box-shadow:0 0 0 0 var(--red-glow);animation:rise 1s 1.4s both, ring 2.2s 2.4s infinite;transition:transform .2s,background .2s}
+  #go:hover{transform:scale(1.06);background:#ff5148}
+  #go[disabled]{opacity:.5;cursor:wait;animation:rise 1s 1.4s both}
+  @keyframes ring{0%{box-shadow:0 0 0 0 var(--red-glow)}100%{box-shadow:0 0 0 22px rgba(255,59,48,0)}}
+  @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+  /* ---------- MARQUEURS ---------- */
+  .marker{width:22px;height:22px;position:relative;cursor:pointer;opacity:0;transform:scale(0) translateY(-40px);transition:opacity .5s, transform .7s cubic-bezier(.2,1.6,.4,1)}
+  .marker.show{opacity:1;transform:scale(1)}
+  .marker .dot{position:absolute;inset:5px;border-radius:50%;background:var(--red);border:2px solid #fff;box-shadow:0 0 12px var(--red),0 2px 6px rgba(0,0,0,.6);transition:transform .25s}
+  .marker .pulse{position:absolute;inset:0;border-radius:50%;background:var(--red-glow);animation:pulse 2s infinite}
+  .marker.done .dot{background:#2ecc71;box-shadow:0 0 12px #2ecc71,0 2px 6px rgba(0,0,0,.6)}
+  .marker.done .pulse{background:rgba(46,204,113,.5)}
+  .marker:hover .dot,.marker.active .dot{transform:scale(1.5)}
+  .marker .tip{position:absolute;bottom:130%;left:50%;transform:translateX(-50%) translateY(6px);white-space:nowrap;background:var(--glass);backdrop-filter:blur(8px);
+    border:1px solid var(--line);padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;pointer-events:none;transition:.2s}
+  .marker:hover .tip,.marker.active .tip{opacity:1;transform:translateX(-50%)}
+  @keyframes pulse{0%{transform:scale(.6);opacity:1}100%{transform:scale(2.6);opacity:0}}
+
+  /* ---------- UI ---------- */
+  .glass{background:var(--glass);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);border:1px solid var(--line);border-radius:18px}
+  #brand{position:fixed;top:18px;left:18px;z-index:10;padding:12px 18px;opacity:0;transform:translateY(-20px);transition:.8s}
+  #brand.on{opacity:1;transform:none}
+  #brand b{font-family:Fraunces,serif;font-size:20px;font-weight:800}
+  #brand b em{font-style:normal;color:var(--red)}
+  #brand small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+
+  #panel{position:fixed;top:18px;right:18px;bottom:18px;width:340px;z-index:10;display:flex;flex-direction:column;overflow:hidden;
+    transform:translateX(120%);transition:transform 1s cubic-bezier(.2,.9,.2,1)}
+  #panel.on{transform:none}
+  #panel header{padding:16px 16px 10px}
+  #panel h2{font-family:Fraunces,serif;font-size:20px;margin-bottom:10px}
+  .totals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .totals div{background:rgba(255,255,255,.05);border-radius:10px;padding:8px;text-align:center;font-weight:700;font-size:15px}
+  .totals span{display:block;font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{all:unset;cursor:pointer;font-size:12px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted);transition:.2s}
+  .chip.on,.chip:hover{background:var(--ink);color:#111;border-color:var(--ink)}
+  #list{list-style:none;overflow-y:auto;padding:6px 10px 12px;flex:1}
+  #list::-webkit-scrollbar{width:6px}#list::-webkit-scrollbar-thumb{background:#ffffff22;border-radius:6px}
+  #list li{display:flex;gap:12px;align-items:center;padding:10px;border-radius:12px;cursor:pointer;transition:background .2s, transform .2s;
+    opacity:0;transform:translateX(30px);animation:slidein .5s forwards}
+  #list li:hover,#list li.active{background:rgba(255,255,255,.08)}
+  #list li.active{box-shadow:inset 3px 0 0 var(--red)}
+  @keyframes slidein{to{opacity:1;transform:none}}
+  .li-dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);flex:none}
+  .li-dot.done{background:#2ecc71;box-shadow:0 0 8px #2ecc71}
+  .li-name{font-weight:600;font-size:14px}
+  .li-meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .tools{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+  .btn{all:unset;cursor:pointer;flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:600;background:rgba(255,255,255,.08);transition:.2s}
+  .btn:hover{background:rgba(255,255,255,.16)}
+  .btn.red{background:var(--red)}.btn.red:hover{background:#ff5148}
+
+  /* Fiche randonnée */
+  #card{position:fixed;left:18px;bottom:18px;z-index:11;width:min(400px,calc(100vw - 36px));padding:20px;opacity:0;transform:translateY(30px);pointer-events:none;transition:.6s cubic-bezier(.2,.9,.2,1)}
+  #card.on{opacity:1;transform:none;pointer-events:auto}
+  #card .where{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+  #card h3{font-family:Fraunces,serif;font-size:28px;line-height:1.1;margin:6px 0 14px}
+  #card .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  #card .grid div{background:rgba(255,255,255,.06);border-radius:12px;padding:10px;font-weight:700;font-size:16px}
+  #card .grid span{display:block;font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+  #card .note{font-size:13px;color:var(--muted);margin-top:12px;line-height:1.5}
+  #card .badge{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(255,59,48,.18);color:#ff8a80;font-weight:600;margin-left:6px;vertical-align:middle}
+  #card .badge.done{background:rgba(46,204,113,.18);color:#7be3a5}
+  #card .nav{display:flex;gap:8px;margin-top:14px}
+  #close{all:unset;cursor:pointer;position:absolute;top:12px;right:14px;font-size:20px;color:var(--muted)}
+
+  #err{display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;text-align:center;padding:30px;background:#02040a}
+
+  @media (max-width:760px){
+    #brand{top:10px;left:10px;padding:8px 12px}#brand b{font-size:16px}
+    #panel{top:auto;left:8px;right:8px;bottom:8px;width:auto;height:42vh;transform:translateY(120%)}
+    #card{bottom:calc(42vh + 16px);left:8px;width:calc(100vw - 16px);padding:14px}
+    #card h3{font-size:22px}
+    .intro-stats{gap:16px}.intro-stats div{font-size:24px}
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<!-- Écran d'accueil -->
+<section id="intro">
+  <div class="kicker">Carnet de randonnées</div>
+  <h1>Noé <em>&</em> Enzo</h1>
+  <p>Toutes les randonnées qu'on va réaliser ensemble, des Vosges à l'Islande. Clique pour partir.</p>
+  <div class="intro-stats">
+    <div id="s-count">0<span>randos</span></div>
+    <div id="s-km">0<span>km</span></div>
+    <div id="s-dp">0<span>m D+</span></div>
+  </div>
+  <button id="go" disabled>Chargement…</button>
+</section>
+
+<div id="brand" class="glass"><b>Noé <em>&</em> Enzo</b><small>Carnet de randonnées</small></div>
+
+<aside id="panel" class="glass">
+  <header>
+    <h2>Nos randonnées</h2>
+    <div class="totals">
+      <div id="t-count">0<span>randos</span></div>
+      <div id="t-km">0<span>km</span></div>
+      <div id="t-dp">0<span>m D+</span></div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
+  <ul id="list"></ul>
+  <div class="tools">
+    <button class="btn" id="btn-world">🌍 Monde</button>
+    <button class="btn" id="btn-alps">🏔️ Alpes</button>
+    <button class="btn red" id="btn-tour">▶ Visite</button>
+  </div>
+</aside>
+
+<div id="card" class="glass">
+  <button id="close" aria-label="Fermer">×</button>
+  <div class="where" id="c-where"></div>
+  <h3 id="c-name"></h3>
+  <div class="grid">
+    <div><span>Distance</span><b id="c-dist"></b></div>
+    <div><span>Dénivelé +</span><b id="c-dp"></b></div>
+    <div><span>Alt. max</span><b id="c-alt"></b></div>
+  </div>
+  <div class="note" id="c-note"></div>
+  <div class="nav">
+    <button class="btn" id="c-prev">← Précédente</button>
+    <button class="btn red" id="c-next">Suivante →</button>
+  </div>
+</div>
+
+<div id="err"><div><h2>Oups 😕</h2><p style="color:#a9b3c1;margin-top:10px">Ton navigateur ne supporte pas WebGL, nécessaire pour la carte 3D.<br>Essaie avec Chrome, Firefox ou Safari à jour.</p></div></div>
+
+<script>
+/* =====================================================================
+   👉 LISTE DES RANDONNÉES — c'est ici qu'on modifie / ajoute
+   - statut : "a-venir" (point rouge) ou "fait" (point vert)
+   - dist en km, dp = dénivelé positif en m, alt = altitude max en m
+     (mettre null si on ne sait pas encore)
+   - lng/lat : coordonnées GPS (clic droit sur Google Maps pour les avoir)
+   - trace (optionnel) : liste de points [lng, lat] pour les itinérances
+   ===================================================================== */
+const RANDOS = [
+  { nom:"Boucles du Hohneck", region:"Vosges", pays:"France", lng:7.0186, lat:48.0397, dist:"36", dp:"1 400", alt:1363, statut:"a-venir" },
+  { nom:"Lac d'Oeschinen", region:"Oberland bernois", pays:"Suisse", lng:7.7275, lat:46.4983, dist:"23", dp:"2 000", alt:2800, statut:"a-venir" },
+  { nom:"Plateau de Bure", region:"Dévoluy", pays:"France", lng:5.9070, lat:44.6340, dist:null, dp:null, alt:2709, statut:"a-venir" },
+  { nom:"Lac Vert", region:"Passy · Haute-Savoie", pays:"France", lng:6.7425, lat:45.9565, dist:"3 à 6", dp:"250", alt:1266, statut:"a-venir" },
+  { nom:"Lac d'Oô", region:"Pyrénées", pays:"France", lng:0.5017, lat:42.7306, dist:"7", dp:"400", alt:1507, statut:"a-venir" },
+  { nom:"Lac du Lauvitel", region:"Écrins", pays:"France", lng:6.0567, lat:44.9744, dist:"7 à 8", dp:"580", alt:1530, statut:"a-venir" },
+  { nom:"Lac de Gaube", region:"Pyrénées", pays:"France", lng:-0.1442, lat:42.8317, dist:"8", dp:"350", alt:1727, statut:"a-venir" },
+  { nom:"Lac d'Allos", region:"Mercantour", pays:"France", lng:6.7094, lat:44.2286, dist:"8", dp:"250", alt:2230, statut:"a-venir" },
+  { nom:"Sentier des Roches", region:"Vosges", pays:"France", lng:7.0211, lat:48.0611, dist:"~10", dp:"800", alt:1361, statut:"a-venir" },
+  { nom:"Mürren", region:"Lauterbrunnen", pays:"Suisse", lng:7.8925, lat:46.5590, dist:"12", dp:"800 à 1 300", alt:2970, statut:"a-venir" },
+  { nom:"Pico do Arieiro", region:"Madère", pays:"Portugal", lng:-16.9286, lat:32.7353, dist:"12", dp:"1 600", alt:1862, statut:"a-venir" },
+  { nom:"Grand Ballon", region:"Vosges", pays:"France", lng:7.0986, lat:47.9014, dist:"12 à 15", dp:"700 à 900", alt:1424, statut:"a-venir" },
+  { nom:"Skógafoss", region:"Sud de l'Islande", pays:"Islande", lng:-19.5114, lat:63.5321, dist:"16", dp:"1 000", alt:1040, statut:"a-venir" },
+  { nom:"Montcalm", region:"Pyrénées ariégeoises", pays:"France", lng:1.4061, lat:42.6717, dist:"22", dp:"2 200", alt:3077, statut:"a-venir" },
+  { nom:"Aiguille de la Grande Sassière", region:"Tarentaise", pays:"France", lng:6.9833, lat:45.4994, dist:"21", dp:"1 473", alt:3745, statut:"a-venir", note:"Boucle de 21 km." },
+  { nom:"Lac de Montagnon", region:"Pyrénées", pays:"France", lng:-0.5480, lat:42.9960, dist:null, dp:null, alt:null, statut:"a-venir", note:"Position approximative, à vérifier." },
+  { nom:"Cervin", region:"Zermatt · Valais", pays:"Suisse", lng:7.6586, lat:45.9763, dist:null, dp:null, alt:null, statut:"a-venir" },
+  { nom:"Säntis", region:"Appenzell", pays:"Suisse", lng:9.3433, lat:47.2494, dist:null, dp:null, alt:2502, statut:"a-venir" },
+  { nom:"Pic de Jallouvre", region:"Bornes-Aravis", pays:"France", lng:6.4900, lat:46.0100, dist:null, dp:null, alt:2408, statut:"a-venir" },
+  { nom:"Dolomites — Alta Via 1", region:"Dolomites", pays:"Italie", lng:12.0853, lat:46.6944, dist:"120", dp:"6 600", alt:2752, statut:"a-venir", itinerance:true,
+    note:"Itinérance de plusieurs jours, du Lago di Braies à Belluno. Tracé indicatif.",
+    trace:[[12.085,46.694],[12.06,46.65],[12.02,46.62],[12.01,46.53],[12.05,46.48],[12.03,46.42],[12.04,46.35],[12.10,46.30],[12.18,46.20]] },
+  { nom:"Tour du Mont Blanc", region:"France · Italie · Suisse", pays:"France", lng:6.8694, lat:45.9237, dist:"170", dp:"10 000", alt:2536, statut:"a-venir", itinerance:true,
+    note:"Le grand tour du massif en ~10 jours. Tracé indicatif.",
+    trace:[[6.799,45.890],[6.727,45.821],[6.807,45.748],[6.972,45.792],[7.073,45.893],[7.117,46.031],[6.993,46.056],[6.960,46.030],[6.869,45.924],[6.799,45.890]] },
+  { nom:"GR20", region:"Corse", pays:"France", lng:9.0100, lat:42.2000, dist:"180", dp:"12 500", alt:2598, statut:"a-venir", itinerance:true,
+    note:"La traversée mythique de la Corse, de Calenzana à Conca. Tracé indicatif.",
+    trace:[[8.855,42.508],[8.88,42.47],[8.94,42.43],[8.96,42.33],[9.01,42.20],[9.13,42.126],[9.15,42.03],[9.20,41.90],[9.25,41.77],[9.34,41.73]] },
+];
+/* ===================================================================== */
+
+const $ = s => document.querySelector(s);
+const num = v => v ? parseFloat(String(v).replace(/\s/g,'').replace(/^~/,'').split('à')[0]) || 0 : 0;
+const fmt = n => Math.round(n).toLocaleString('fr-FR');
+const isMobile = matchMedia('(max-width:760px)').matches;
+
+// Totaux
+const totKm = RANDOS.reduce((a,r)=>a+num(r.dist),0);
+const totDp = RANDOS.reduce((a,r)=>a+num(r.dp),0);
+const nbPays = new Set(RANDOS.map(r=>r.pays)).size;
+
+function countUp(el, target, label, dur=1800){
+  const t0 = performance.now();
+  (function f(t){ const p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3);
+    el.innerHTML = fmt(target*e)+`<span>${label}</span>`; if(p<1) requestAnimationFrame(f); })(t0);
+}
+setTimeout(()=>{ countUp($('#s-count'),RANDOS.length,'randos'); countUp($('#s-km'),totKm,'km'); countUp($('#s-dp'),totDp,'m D+'); },1200);
+
+// Vérif WebGL
+if(!window.maplibregl || !(()=>{try{const c=document.createElement('canvas');return !!(c.getContext('webgl2')||c.getContext('webgl'))}catch(e){return false}})()){
+  $('#err').style.display='flex';
+}
+
+/* ---------- CARTE ---------- */
+const map = new maplibregl.Map({
+  container:'map',
+  center:[10,28], zoom: isMobile?0.6:1.5, pitch:0,
+  attributionControl:{compact:true},
+  maxPitch:80,
+  style:{
+    version:8,
+    projection:{type:'globe'},
+    sky:{
+      'sky-color':'#1b3b6f','horizon-color':'#a8cfff','fog-color':'#dbe9ff',
+      'sky-horizon-blend':0.6,'horizon-fog-blend':0.5,'fog-ground-blend':0.85,
+      'atmosphere-blend':['interpolate',['linear'],['zoom'],0,1,5,1,8,0]
+    },
+    sources:{
+      sat:{type:'raster',tileSize:256,maxzoom:18,
+        tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'},
+      labels:{type:'raster',tileSize:256,maxzoom:18,
+        tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}']},
+      dem:{type:'raster-dem',encoding:'terrarium',tileSize:256,maxzoom:14,
+        tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+        attribution:'Relief © Mapzen / AWS Terrain Tiles'},
+      demShade:{type:'raster-dem',encoding:'terrarium',tileSize:256,maxzoom:14,
+        tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png']}
+    },
+    layers:[
+      {id:'bg',type:'background',paint:{'background-color':'#0a1424'}},
+      {id:'sat',type:'raster',source:'sat',paint:{'raster-saturation':0.15,'raster-contrast':0.08}},
+      {id:'shade',type:'hillshade',source:'demShade',paint:{'hillshade-exaggeration':0.35,'hillshade-shadow-color':'#0b1020'}},
+      {id:'labels',type:'raster',source:'labels',paint:{'raster-opacity':['interpolate',['linear'],['zoom'],2,0.9,9,0.55]}}
+    ]
+  }
+});
+map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
+
+/* Rotation du globe à l'accueil */
+let spinning = true;
+function spin(){ if(!spinning) return; const c=map.getCenter(); map.setCenter([c.lng+0.08, c.lat]); requestAnimationFrame(spin); }
+
+/* Orbite autour d'une rando */
+let orbiting = false;
+function orbit(){ if(!orbiting) return; map.setBearing(map.getBearing()+0.06); requestAnimationFrame(orbit); }
+function stopOrbit(){ orbiting = false; }
+['mousedown','touchstart','wheel'].forEach(ev=>map.getCanvas().addEventListener(ev,()=>{stopOrbit(); stopTour();},{passive:true}));
+
+/* Marqueurs */
+const markers = [];
+RANDOS.forEach((r,i)=>{
+  const el = document.createElement('div');
+  el.className = 'marker' + (r.statut==='fait'?' done':'');
+  el.innerHTML = `<span class="pulse"></span><span class="dot"></span><span class="tip">${r.nom}</span>`;
+  el.addEventListener('click',e=>{e.stopPropagation(); stopTour(); focus(i);});
+  const m = new maplibregl.Marker({element:el, anchor:'center'}).setLngLat([r.lng,r.lat]);
+  markers.push({m,el});
+});
+
+/* Liste + filtres */
+const FILTRES = {
+  'Toutes': ()=>true,
+  'France': r=>r.pays==='France' && !r.itinerance,
+  'Suisse': r=>r.pays==='Suisse',
+  'Itinérances': r=>r.itinerance,
+  'Ailleurs': r=>!['France','Suisse'].includes(r.pays) && !r.itinerance,
+};
+let filtre = 'Toutes', current = -1;
+function renderChips(){
+  $('#chips').innerHTML = Object.keys(FILTRES).map(k=>`<button class="chip ${k===filtre?'on':''}" data-k="${k}">${k}</button>`).join('');
+  $('#chips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{filtre=b.dataset.k; renderChips(); renderList();});
+}
+function visibles(){ return RANDOS.map((r,i)=>i).filter(i=>FILTRES[filtre](RANDOS[i])); }
+function renderList(){
+  const ids = visibles();
+  $('#list').innerHTML = ids.map((i,k)=>{ const r=RANDOS[i];
+    const meta=[r.region, r.dist?r.dist+' km':null, r.dp?'+'+r.dp+' m':null].filter(Boolean).join(' · ');
+    return `<li data-i="${i}" class="${i===current?'active':''}" style="animation-delay:${k*40}ms">
+      <span class="li-dot ${r.statut==='fait'?'done':''}"></span><div><div class="li-name">${r.nom}</div><div class="li-meta">${meta}</div></div></li>`;}).join('');
+  $('#list').querySelectorAll('li').forEach(li=>li.onclick=()=>{stopTour(); focus(+li.dataset.i);});
+  markers.forEach(({el},i)=>el.style.display = ids.includes(i)?'':'none');
+}
+function setTotals(){ countUp($('#t-count'),RANDOS.length,'randos',1200); countUp($('#t-km'),totKm,'km',1200); countUp($('#t-dp'),totDp,'m D+',1200); }
+
+/* Fiche + vol vers une rando */
+function focus(i){
+  current = i; const r = RANDOS[i];
+  markers.forEach(({el},k)=>el.classList.toggle('active',k===i));
+  $('#list').querySelectorAll('li').forEach(li=>li.classList.toggle('active',+li.dataset.i===i));
+  const li = $(`#list li[data-i="${i}"]`); if(li) li.scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  $('#c-where').textContent = `${r.region} · ${r.pays}`;
+  $('#c-name').innerHTML = r.nom + `<span class="badge ${r.statut==='fait'?'done':''}">${r.statut==='fait'?'Faite ✓':'À venir'}</span>`;
+  $('#c-dist').textContent = r.dist ? r.dist+' km' : '—';
+  $('#c-dp').textContent = r.dp ? '+'+r.dp+' m' : '—';
+  $('#c-alt').textContent = r.alt ? fmt(r.alt)+' m' : '—';
+  $('#c-note').textContent = r.note || (!r.dist ? 'Infos à compléter.' : '');
+  $('#card').classList.add('on');
+
+  stopOrbit();
+  const pad = isMobile ? {bottom:window.innerHeight*0.42} : {right:360, bottom:120};
+  map.flyTo({ center:[r.lng,r.lat], zoom: r.itinerance ? 9.6 : 13, pitch: r.itinerance ? 60 : 72,
+    bearing: (map.getBearing() + 70 + Math.random()*60) % 360,
+    duration: 5200, curve: 1.7, padding: pad, essential:true });
+  map.once('moveend',()=>{ if(current===i && !touring){ orbiting=true; orbit(); } });
+}
+function step(d){ const ids=visibles(); if(!ids.length) return; let k=ids.indexOf(current); k = k<0?0:(k+d+ids.length)%ids.length; focus(ids[k]); }
+$('#c-next').onclick=()=>{stopTour(); step(1);};
+$('#c-prev').onclick=()=>{stopTour(); step(-1);};
+$('#close').onclick=()=>{ $('#card').classList.remove('on'); current=-1; markers.forEach(({el})=>el.classList.remove('active')); renderList(); overview(); };
+
+/* Vues */
+function overview(){ stopOrbit(); map.flyTo({center:[6.6,46.0], zoom:isMobile?4.6:5.6, pitch:58, bearing:-15, duration:4000, padding:{right:isMobile?0:360, bottom:0}, essential:true}); }
+function world(){ stopOrbit(); map.flyTo({center:[-2,45], zoom:isMobile?1.2:2.2, pitch:0, bearing:0, duration:4500, padding:{right:isMobile?0:360}, essential:true}); }
+$('#btn-alps').onclick=()=>{stopTour(); overview();};
+$('#btn-world').onclick=()=>{stopTour(); world();};
+
+/* Visite guidée automatique */
+let touring=false, tourTimer=null;
+function stopTour(){ touring=false; clearTimeout(tourTimer); $('#btn-tour').textContent='▶ Visite'; }
+function tourNext(){ if(!touring) return; step(1); tourTimer=setTimeout(tourNext, 9000); }
+$('#btn-tour').onclick=()=>{ if(touring){stopTour();return;} touring=true; $('#btn-tour').textContent='⏸ Pause'; tourNext(); };
+
+/* Traces des itinérances */
+function addTraces(){
+  const fc = {type:'FeatureCollection',features:RANDOS.filter(r=>r.trace).map(r=>({type:'Feature',properties:{nom:r.nom},geometry:{type:'LineString',coordinates:r.trace}}))};
+  map.addSource('traces',{type:'geojson',data:fc});
+  map.addLayer({id:'traces-glow',type:'line',source:'traces',layout:{'line-join':'round','line-cap':'round'},
+    paint:{'line-color':'#ff3b30','line-width':10,'line-blur':8,'line-opacity':0}});
+  map.addLayer({id:'traces',type:'line',source:'traces',layout:{'line-join':'round','line-cap':'round'},
+    paint:{'line-color':'#ffffff','line-width':2.5,'line-dasharray':[2,1.5],'line-opacity':0}});
+  setTimeout(()=>{ map.setPaintProperty('traces-glow','line-opacity',0.8); map.setPaintProperty('traces','line-opacity',0.95); },300);
+}
+
+/* ---------- SÉQUENCE D'OUVERTURE ---------- */
+map.on('load',()=>{
+  spin();
+  const go = $('#go'); go.disabled=false; go.textContent='Partir à l\'aventure →';
+});
+map.on('error',e=>console.warn(e && e.error));
+
+$('#go').onclick = ()=>{
+  $('#intro').classList.add('hide');
+  spinning = false;
+  // 1) Le globe pivote et plonge vers l'Europe
+  map.flyTo({center:[4,46], zoom:isMobile?3.4:4.2, pitch:20, bearing:0, duration:6000, curve:2, essential:true,
+    easing:t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2});
+  map.once('moveend',()=>{
+    // 2) La carte passe en relief 3D
+    try { map.setTerrain({source:'dem', exaggeration:1.5}); } catch(e){ console.warn('terrain',e); }
+    // 3) Les points rouges tombent un par un
+    markers.forEach(({m,el},i)=>{ m.addTo(map); setTimeout(()=>el.classList.add('show'), 150+i*110); });
+    addTraces();
+    // 4) Bascule de la caméra en vue 3D inclinée
+    map.easeTo({center:[6.6,46.0], zoom:isMobile?4.6:5.6, pitch:58, bearing:-15, duration:4500,
+      padding:{right:isMobile?0:360}, easing:t=>1-Math.pow(1-t,3), essential:true});
+    setTimeout(()=>{ $('#brand').classList.add('on'); $('#panel').classList.add('on'); renderChips(); renderList(); setTotals(); }, 900);
+  });
+};
+</script>
+</body>
+</html>
